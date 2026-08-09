@@ -6,6 +6,7 @@ import { initController, updateController } from './player/controller.js';
 import { initFollowCamera, updateFollowCamera } from './player/camera.js';
 import { initKeyboard } from './input/keyboard.js';
 import { initJoystick } from './input/joystick.js';
+import { createTerrain, createWater } from './world/terrain.js';
 
 document.body.appendChild(renderer.domElement);
 
@@ -16,7 +17,21 @@ loadJourney()
   .then((data) => {
     console.log('Journey data loaded:', data);
 
-    const spawn = data.areas[0].spawn;
+    // Area pertama = Sekongkang (Fase 2 fokus di sini)
+    const area = data.areas[0];
+    const palette = area.palette;
+
+    // Scene background dari palette
+    scene.background = new THREE.Color(palette.sky);
+
+    // Terrain + air
+    const terrain = createTerrain(palette);
+    scene.add(terrain);
+
+    const water = createWater(palette);
+    scene.add(water);
+
+    const spawn = area.spawn;
 
     // Placeholder karakter
     const bodyGeo = new THREE.BoxGeometry(0.6, 1.6, 0.4);
@@ -32,7 +47,7 @@ loadJourney()
 
     const character = new THREE.Group();
     character.add(body);
-    character.position.set(spawn.x, 0, spawn.z);
+    character.position.set(spawn.x, 1.0, spawn.z); // Y from terrain later (T2.2)
     scene.add(character);
 
     initController(character, camera);

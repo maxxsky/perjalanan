@@ -18,6 +18,17 @@ export const CONFIG = {
     deadzone: 0.15,
   },
   world: {
-    gridSize: 200,
+    pathWidth: 3.5,
+    bounds: { minX: -30, maxX: 60, minZ: -140, maxZ: 140 },
+    boundsPushback: 6.0,
+    fogNear: 60,
+    fogFar: 220,
+    treeCount: 400,
+  },
+  terrain: {
+    segmentsX: 100,
+    segmentsZ: 150,
+    sizeX: 200,
+    sizeZ: 300,
   },
 };
