@@ -154,14 +154,17 @@ export function createVegetation(areaId, pathCurve) {
     // Cek: tidak di air
     if (wy < 0.3) continue;
 
-    // Cek: tidak di jalur
+    // Cek: tidak di jalur — sample kurva manual
     if (pathCurve) {
-      const pt = new THREE.Vector3(wx, wy, wz);
-      const closest = new THREE.Vector3();
-      pathCurve.closestPointToPoint(pt, false, closest);
-      const dx = wx - closest.x;
-      const dz = wz - closest.z;
-      if (Math.sqrt(dx * dx + dz * dz) < pathClearRadius) continue;
+      let minDist = Infinity;
+      for (let s = 0; s <= 50; s++) {
+        const pt = pathCurve.getPointAt(s / 50);
+        const dx = wx - pt.x;
+        const dz = wz - pt.z;
+        const d = dx * dx + dz * dz;
+        if (d < minDist) minDist = d;
+      }
+      if (Math.sqrt(minDist) < pathClearRadius) continue;
     }
 
     // Kerapatan naik seiring X (bukit lebih lebat)
