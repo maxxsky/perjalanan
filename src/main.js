@@ -7,6 +7,7 @@ import { initFollowCamera, updateFollowCamera } from './player/camera.js';
 import { initKeyboard } from './input/keyboard.js';
 import { initJoystick } from './input/joystick.js';
 import { createTerrain, createWater, getTerrainHeight } from './world/terrain.js';
+import { createPath } from './world/path.js';
 
 document.body.appendChild(renderer.domElement);
 
@@ -31,6 +32,10 @@ loadJourney()
 
     const water = createWater(palette);
     scene.add(water);
+
+    // Jalur dari route
+    const path = createPath(area.route, palette);
+    scene.add(path);
 
     const spawn = area.spawn;
 
