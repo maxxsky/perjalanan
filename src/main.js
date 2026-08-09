@@ -6,7 +6,7 @@ import { initController, updateController } from './player/controller.js';
 import { initFollowCamera, updateFollowCamera } from './player/camera.js';
 import { initKeyboard } from './input/keyboard.js';
 import { initJoystick } from './input/joystick.js';
-import { createTerrain, createWater } from './world/terrain.js';
+import { createTerrain, createWater, getTerrainHeight } from './world/terrain.js';
 
 document.body.appendChild(renderer.domElement);
 
@@ -47,7 +47,7 @@ loadJourney()
 
     const character = new THREE.Group();
     character.add(body);
-    character.position.set(spawn.x, 1.0, spawn.z); // Y from terrain later (T2.2)
+    character.position.set(spawn.x, getTerrainHeight(spawn.x, spawn.z), spawn.z);
     scene.add(character);
 
     initController(character, camera);

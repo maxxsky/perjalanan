@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { getInputVector } from '../input/index.js';
 import { getCameraYaw } from './camera.js';
+import { getTerrainHeight } from '../world/terrain.js';
 
 let character = null;
 let camera = null;
@@ -66,10 +67,15 @@ export function updateController(delta) {
   // Simpan buat camera.js
   _moveDir = { x: moveX, z: moveZ };
 
-  // Gerak — y dikunci 0 (T2.2 nanti pakai terrain)
+  // Gerak XZ
   const speed = CONFIG.player.walkSpeed;
   character.position.x += moveX * speed * delta;
   character.position.z += moveZ * speed * delta;
+
+  // Y mengikuti terrain dengan smoothing
+  const targetY = getTerrainHeight(character.position.x, character.position.z);
+  const yLerp = Math.min(CONFIG.player.terrainSmooth * delta, 1);
+  character.position.y += (targetY - character.position.y) * yLerp;
 
   // Rotasi karakter — lerp menghadap arah gerak
   const targetAngle = Math.atan2(moveX, moveZ);

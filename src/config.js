@@ -3,6 +3,7 @@ export const CONFIG = {
     walkSpeed: 4.0,
     turnSpeed: 8.0,
     partnerOffset: 0.7,
+    terrainSmooth: 15,
   },
   camera: {
     distance: 12,
