@@ -10,6 +10,8 @@ export const CONFIG = {
     lookAtHeight: 1.5,
     followLerp: 3.0,
     fov: 55,
+    recenterDot: 0.95,
+    idleRecenterLerp: 2.0,
   },
   input: {
     joystickRadius: 60,
