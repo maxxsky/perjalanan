@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
 import { CONFIG } from '../config.js';
+import { mulberry32, hashString } from '../util/rng.js';
 
 // ============================================================
 //  Noise
@@ -145,11 +146,13 @@ export function createTerrain(palette) {
   const colors = new Float32Array(nonIndexed.attributes.position.count * 3);
   const nPositions = nonIndexed.attributes.position;
 
+  // PRNG untuk variasi warna — seed dari area biar deterministik
+  const colorRng = mulberry32(hashString(palette.terrain));
+
   for (let i = 0; i < nPositions.count; i++) {
     const ix = i * 3;
-    const worldY = nPositions.array[ix + 1]; // tinggi (Y)
-    const triIdx = Math.floor(i / 3);
-    const variation = (triIdx * 7 + triIdx * triIdx * 13) % 100 / 100 - 0.5;
+    const worldY = nPositions.array[ix + 1];
+    const variation = colorRng() - 0.5; // -0.5 .. 0.5
     const color = getVertexColor(worldY, palette, variation);
     colors[ix] = color.r;
     colors[ix + 1] = color.g;
