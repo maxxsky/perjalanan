@@ -8,26 +8,16 @@ import { CONFIG } from '../config.js';
 
 const perlin = new ImprovedNoise();
 
+/**
+ * Fractal Brownian Motion — tiga oktaf.
+ * Amplitudo per oktaf adalah satuan DUNIA, tidak dinormalisasi.
+ */
 function fbm(x, z) {
-  let val = 0;
-  let amp = 1;
-  let freq = 1;
-  let total = 0;
-
-  // Tiga oktaf
-  const octaves = [
-    { scale: 0.008, amplitude: 6 },
-    { scale: 0.03,  amplitude: 1.5 },
-    { scale: 0.1,   amplitude: 0.3 },
-  ];
-
-  for (const o of octaves) {
-    val += perlin.noise(x * o.scale, 0, z * o.scale) * o.amplitude * amp;
-    total += o.amplitude * amp;
-    amp *= 0.5;
-  }
-
-  return val / total;
+  return (
+    perlin.noise(x * 0.008, 0, z * 0.008) * 6 +
+    perlin.noise(x * 0.03, 0, z * 0.03) * 1.5 +
+    perlin.noise(x * 0.1, 0, z * 0.1) * 0.3
+  );
 }
 
 // ============================================================
@@ -39,10 +29,6 @@ function smoothstep(edge0, edge1, x) {
   return t * t * (3 - 2 * t);
 }
 
-/**
- * Key points untuk profil melintang (fungsi dari X).
- * Antar titik di-smoothstep.
- */
 const PROFILE = [
   { x: -100, y: -8 },    // laut dalam
   { x: -65,  y: -8 },    // mulai landai
@@ -57,12 +43,9 @@ const PROFILE = [
 ];
 
 function getBaseHeight(x) {
-  // Di bawah titik pertama
   if (x <= PROFILE[0].x) return PROFILE[0].y;
-  // Di atas titik terakhir
   if (x >= PROFILE[PROFILE.length - 1].x) return PROFILE[PROFILE.length - 1].y;
 
-  // Cari segmen
   for (let i = 0; i < PROFILE.length - 1; i++) {
     const a = PROFILE[i];
     const b = PROFILE[i + 1];
@@ -71,25 +54,20 @@ function getBaseHeight(x) {
       return a.y + (b.y - a.y) * t;
     }
   }
-
   return 0;
 }
 
-/**
- * Damping noise berdasarkan zona.
- * Jalur & laut = hampir nol, bukit = penuh.
- */
 function getNoiseDamping(x) {
   if (x < -40) return 0.0;
   if (x < -25) return smoothstep(-40, -25, x) * 0.05;
   if (x < -10) return 0.05 + smoothstep(-25, -10, x) * 0.1;
-  if (x < 15)  return 0.08;  // jalur: hampir datar
+  if (x < 15)  return 0.08;
   if (x < 30)  return 0.08 + smoothstep(15, 30, x) * 0.92;
-  return 1.0;  // bukit: noise penuh
+  return 1.0;
 }
 
 // ============================================================
-//  Height function — EKSPOR, sumber kebenaran tunggal
+//  Height function
 // ============================================================
 
 export function getTerrainHeight(x, z) {
@@ -123,7 +101,6 @@ function getVertexColor(y, palette, variation) {
     hex = darkenHex(parseInt(palette.terrain.slice(1), 16), 0.75);
   }
 
-  // Variasi acak ±3% per segitiga
   const v = 1 + variation * 0.06;
   const r = Math.min(255, Math.floor(((hex >> 16) & 0xff) * v));
   const g = Math.min(255, Math.floor(((hex >> 8) & 0xff) * v));
@@ -137,9 +114,10 @@ function getVertexColor(y, palette, variation) {
 // ============================================================
 
 /**
- * Buat terrain mesh dari PlaneGeometry + vertex displacement.
- * @param {object} palette — warna dari area
- * @returns {THREE.Mesh}
+ * Layout array setelah PlaneGeometry + rotateX(-PI/2):
+ *   array[ix+0] = world X  (rentang -sizeX/2 .. sizeX/2)
+ *   array[ix+1] = world Y  (tinggi, awal 0)
+ *   array[ix+2] = world Z  (rentang -sizeZ/2 .. sizeZ/2)
  */
 export function createTerrain(palette) {
   const { segmentsX, segmentsZ, sizeX, sizeZ } = CONFIG.terrain;
@@ -148,43 +126,30 @@ export function createTerrain(palette) {
   geo.rotateX(-Math.PI / 2);
 
   const positions = geo.attributes.position;
-  const halfX = sizeX / 2;
-  const halfZ = sizeZ / 2;
 
   // Displace vertex Y ke terrain height
   for (let i = 0; i < positions.count; i++) {
     const ix = i * 3;
-    const wx = positions.getX(i); // world X (nilai geometri sebelum rotate: ini jadi X dunia)
-    const wz = positions.getY(i); // nilai Z geometri (sebelum rotate, ini sumbu Y geometri)
-    // Setelah rotateX(-PI/2), sumbu Y → -Z, sumbu Z → Y
-    // Tapi kita pakai PlaneGeometry yg sudah di-rotate, posisi vertex-nya:
-    // getX = world X, getY = world Z (karena rotate -PI/2), getZ = world Y (negatif)
-    // Cara lebih aman: baca dari array
     const worldX = positions.array[ix];
-    const worldZ = positions.array[ix + 1];
-    positions.array[ix + 2] = getTerrainHeight(worldX, worldZ);
+    const worldZ = positions.array[ix + 2];
+    positions.array[ix + 1] = getTerrainHeight(worldX, worldZ);
   }
 
   positions.needsUpdate = true;
-  geo.computeVertexNormals();
 
   // Non-indexed → flat shading per segitiga
   const nonIndexed = geo.toNonIndexed();
+  nonIndexed.computeVertexNormals();
 
   // Vertex colors
   const colors = new Float32Array(nonIndexed.attributes.position.count * 3);
   const nPositions = nonIndexed.attributes.position;
 
-  // Variasi acak per segitiga (setiap 3 vertex = 1 segitiga di non-indexed)
-  const triCount = nPositions.count / 3;
-
   for (let i = 0; i < nPositions.count; i++) {
     const ix = i * 3;
-    const worldX = nPositions.array[ix];
-    const worldZ = nPositions.array[ix + 1];
-    const worldY = nPositions.array[ix + 2];
+    const worldY = nPositions.array[ix + 1]; // tinggi (Y)
     const triIdx = Math.floor(i / 3);
-    const variation = (triIdx * 7 + triIdx * triIdx * 13) % 100 / 100 - 0.5; // deterministic "random"
+    const variation = (triIdx * 7 + triIdx * triIdx * 13) % 100 / 100 - 0.5;
     const color = getVertexColor(worldY, palette, variation);
     colors[ix] = color.r;
     colors[ix + 1] = color.g;
@@ -198,10 +163,7 @@ export function createTerrain(palette) {
     flatShading: true,
   });
 
-  const mesh = new THREE.Mesh(nonIndexed, mat);
-  mesh.receiveShadow = true;
-
-  return mesh;
+  return new THREE.Mesh(nonIndexed, mat);
 }
 
 // ============================================================
@@ -209,10 +171,10 @@ export function createTerrain(palette) {
 // ============================================================
 
 /**
- * Plane datar untuk permukaan air.
+ * Plane air hanya di sisi barat (laut), tidak muncul di timur (bukit).
  */
 export function createWater(palette) {
-  const geo = new THREE.PlaneGeometry(400, 400);
+  const geo = new THREE.PlaneGeometry(260, 400);
   const mat = new THREE.MeshLambertMaterial({
     color: palette.water,
     transparent: true,
@@ -220,6 +182,6 @@ export function createWater(palette) {
   });
   const water = new THREE.Mesh(geo, mat);
   water.rotation.x = -Math.PI / 2;
-  water.position.y = 0;
+  water.position.set(-80, 0, 0);
   return water;
 }
