@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CONFIG } from './config.js';
 import { scene, renderer, camera } from './core/scene.js';
 import { startLoop } from './core/loop.js';
 import { loadJourney } from './data/loader.js';
@@ -8,6 +9,7 @@ import { initKeyboard } from './input/keyboard.js';
 import { initJoystick } from './input/joystick.js';
 import { createTerrain, createWater, getTerrainHeight } from './world/terrain.js';
 import { createPath } from './world/path.js';
+import { createVegetation } from './world/vegetation.js';
 
 document.body.appendChild(renderer.domElement);
 
@@ -18,24 +20,21 @@ loadJourney()
   .then((data) => {
     console.log('Journey data loaded:', data);
 
-    // Area pertama = Sekongkang (Fase 2 fokus di sini)
     const area = data.areas[0];
     const palette = area.palette;
 
-    // Scene background + fog dari palette
+    // Scene background + fog
     scene.background = new THREE.Color(palette.sky);
     scene.fog = new THREE.Fog(palette.fog, CONFIG.world.fogNear, CONFIG.world.fogFar);
 
     // Terrain + air
-    const terrain = createTerrain(palette);
-    scene.add(terrain);
+    scene.add(createTerrain(palette));
+    scene.add(createWater(palette));
 
-    const water = createWater(palette);
-    scene.add(water);
-
-    // Jalur dari route
-    const path = createPath(area.route, palette);
-    scene.add(path);
+    // Jalur + vegetasi
+    const { mesh: pathMesh, curve: pathCurve } = createPath(area.route, palette);
+    scene.add(pathMesh);
+    scene.add(createVegetation(area.id, pathCurve));
 
     const spawn = area.spawn;
 

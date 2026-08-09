@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Route Editor — Perjalanan</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: monospace; background: #1a1a2e; color: #eee; }
+    #app { display: flex; height: 100vh; }
+    #canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+    canvas { display: block; }
+    #panel {
+      width: 280px; background: #16213e; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    button {
+      padding: 8px 12px; border: 1px solid #0f3460; background: #0f3460;
+      color: #eee; cursor: pointer; font-family: monospace;
+    }
+    button:hover { background: #1a4a7a; }
+    textarea { width: 100%; height: 200px; background: #0d1b2a; color: #eee; border: 1px solid #0f3460; padding: 8px; font-family: monospace; font-size: 11px; }
+    label { font-size: 12px; }
+    input[type=range] { width: 100%; }
+    .info { font-size: 11px; color: #8899aa; line-height: 1.5; }
+    h3 { font-size: 14px; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="canvas-wrap">
+    <canvas id="c"></canvas>
+  </div>
+  <div id="panel">
+    <h3>Route Editor</h3>
+    <div class="info">
+      Klik = tambah titik<br>
+      Drag = geser titik<br>
+      Klik kanan = hapus titik
+    </div>
+    <label>Opacity latar: <span id="op-val">0.5</span></label>
+    <input type="range" id="opacity" min="0" max="1" step="0.05" value="0.5" />
+    <label>Skala latar: <span id="scale-val">1.0</span></label>
+    <input type="range" id="bg-scale" min="0.2" max="4" step="0.1" value="1" />
+    <button id="export-btn">📋 Export JSON</button>
+    <textarea id="output" readonly placeholder="Klik Export untuk lihat JSON..."></textarea>
+    <button id="clear-btn">Clear All</button>
+    <div class="info">
+      Tarik gambar peta ke canvas untuk latar.
+    </div>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  // State
+  const points = [];
+  let dragging = -1;
+  let bgImage = null;
+  let bgOpacity = 0.5;
+  let bgScale = 1.0;
+  let panX = 0, panY = 0;
+
+  // Grid settings
+  const gridSpacing = 20; // pixels per grid unit
+  const worldOrigin = { x: 0, z: 0 };
+
+  function resize() {
+    const wrap = document.getElementById('canvas-wrap');
+    canvas.width = wrap.clientWidth;
+    canvas.height = wrap.clientHeight;
+    draw();
+  }
+
+  window.addEventListener('resize', resize);
+
+  // ---- Drawing ----
+
+  function worldToScreen(wx, wz) {
+    return {
+      x: canvas.width / 2 + wx * gridSpacing + panX,
+      y: canvas.height / 2 - wz * gridSpacing + panY,
+    };
+  }
+
+  function screenToWorld(sx, sy) {
+    return {
+      x: (sx - canvas.width / 2 - panX) / gridSpacing,
+      z: -(sy - canvas.height / 2 - panY) / gridSpacing,
+    };
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Background image
+    if (bgImage) {
+      ctx.save();
+      ctx.globalAlpha = bgOpacity;
+      const iw = bgImage.width * bgScale;
+      const ih = bgImage.height * bgScale;
+      const ox = canvas.width / 2 + panX - iw / 2;
+      const oy = canvas.height / 2 + panY - ih / 2;
+      ctx.drawImage(bgImage, ox, oy, iw, ih);
+      ctx.restore();
+    }
+
+    // Grid
+    ctx.strokeStyle = '#2a2a4a';
+    ctx.lineWidth = 0.5;
+    const startX = Math.floor((-canvas.width / 2 - panX) / gridSpacing);
+    const endX = Math.ceil((canvas.width / 2 - panX) / gridSpacing);
+    const startZ = Math.floor((-canvas.height / 2 - panY) / gridSpacing);
+    const endZ = Math.ceil((canvas.height / 2 - panY) / gridSpacing);
+
+    for (let gx = startX; gx <= endX; gx++) {
+      const sx = canvas.width / 2 + gx * gridSpacing + panX;
+      ctx.beginPath();
+      ctx.moveTo(sx, 0);
+      ctx.lineTo(sx, canvas.height);
+      ctx.stroke();
+    }
+    for (let gz = startZ; gz <= endZ; gz++) {
+      const sy = canvas.height / 2 - gz * gridSpacing + panY;
+      ctx.beginPath();
+      ctx.moveTo(0, sy);
+      ctx.lineTo(canvas.width, sy);
+      ctx.stroke();
+    }
+
+    // Origin marker
+    const o = worldToScreen(0, 0);
+    ctx.strokeStyle = '#ff6b6b';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(o.x - 10, o.y);
+    ctx.lineTo(o.x + 10, o.y);
+    ctx.moveTo(o.x, o.y - 10);
+    ctx.lineTo(o.x, o.y + 10);
+    ctx.stroke();
+
+    // Catmull-Rom curve
+    if (points.length >= 2) {
+      ctx.strokeStyle = '#4ecdc4';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const curve = catmullRom(points, 100);
+      for (let i = 0; i < curve.length; i++) {
+        const s = worldToScreen(curve[i].x, curve[i].z);
+        if (i === 0) ctx.moveTo(s.x, s.y);
+        else ctx.lineTo(s.x, s.y);
+      }
+      ctx.stroke();
+    }
+
+    // Points
+    for (let i = 0; i < points.length; i++) {
+      const p = worldToScreen(points[i].x, points[i].z);
+      ctx.fillStyle = i === dragging ? '#ffd93d' : '#4ecdc4';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Label
+      ctx.fillStyle = '#fff';
+      ctx.font = '10px monospace';
+      ctx.fillText(i, p.x + 10, p.y - 5);
+    }
+  }
+
+  // Catmull-Rom spline
+  function catmullRom(pts, numSamples) {
+    if (pts.length < 2) return pts;
+    const result = [];
+    const n = pts.length;
+    for (let i = 0; i < n - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[Math.min(n - 1, i + 2)];
+      for (let s = 0; s < numSamples; s++) {
+        const t = s / numSamples;
+        const t2 = t * t;
+        const t3 = t2 * t;
+        const x = 0.5 * (
+          (2 * p1.x) +
+          (-p0.x + p2.x) * t +
+          (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+          (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
+        );
+        const z = 0.5 * (
+          (2 * p1.z) +
+          (-p0.z + p2.z) * t +
+          (2 * p0.z - 5 * p1.z + 4 * p2.z - p3.z) * t2 +
+          (-p0.z + 3 * p1.z - 3 * p2.z + p3.z) * t3
+        );
+        result.push({ x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10 });
+      }
+    }
+    return result;
+  }
+
+  function exportJSON() {
+    const out = points.map(p => ({ x: Math.round(p.x * 10) / 10, z: Math.round(p.z * 10) / 10 }));
+    document.getElementById('output').value = JSON.stringify(out, null, 2);
+  }
+
+  // ---- Events ----
+
+  function findPoint(sx, sy) {
+    for (let i = points.length - 1; i >= 0; i--) {
+      const s = worldToScreen(points[i].x, points[i].z);
+      const dx = sx - s.x, dy = sy - s.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 12) return i;
+    }
+    return -1;
+  }
+
+  canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    if (e.button === 2) {
+      // Right click — delete
+      const idx = findPoint(sx, sy);
+      if (idx >= 0) {
+        points.splice(idx, 1);
+        draw();
+      }
+      e.preventDefault();
+      return;
+    }
+
+    const idx = findPoint(sx, sy);
+    if (idx >= 0) {
+      dragging = idx;
+      draw();
+    } else {
+      // Add point
+      const w = screenToWorld(sx, sy);
+      points.push({ x: Math.round(w.x * 10) / 10, z: Math.round(w.z * 10) / 10 });
+      draw();
+    }
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (dragging < 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const w = screenToWorld(sx, sy);
+    points[dragging].x = Math.round(w.x * 10) / 10;
+    points[dragging].z = Math.round(w.z * 10) / 10;
+    draw();
+  });
+
+  canvas.addEventListener('mouseup', () => { dragging = -1; draw(); });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Drag-drop background image
+  canvas.addEventListener('dragover', (e) => { e.preventDefault(); });
+  canvas.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => { bgImage = img; draw(); };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Panel controls
+  document.getElementById('opacity').addEventListener('input', (e) => {
+    bgOpacity = parseFloat(e.target.value);
+    document.getElementById('op-val').textContent = bgOpacity;
+    draw();
+  });
+
+  document.getElementById('bg-scale').addEventListener('input', (e) => {
+    bgScale = parseFloat(e.target.value);
+    document.getElementById('scale-val').textContent = bgScale;
+    draw();
+  });
+
+  document.getElementById('export-btn').addEventListener('click', exportJSON);
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    points.length = 0;
+    draw();
+    document.getElementById('output').value = '';
+  });
+
+  resize();
+</script>
+</body>
+</html>
