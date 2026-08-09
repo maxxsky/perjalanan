@@ -1,5 +1,5 @@
 import { getKeyboardVector } from './keyboard.js';
-// import { getJoystickVector } from './joystick.js'; // T1.4
+import { getJoystickVector } from './joystick.js';
 
 /**
  * Gabungkan semua input source jadi satu vektor {x, y} dengan range -1..1.
@@ -7,10 +7,11 @@ import { getKeyboardVector } from './keyboard.js';
  */
 export function getInputVector() {
   const kb = getKeyboardVector();
+  const js = getJoystickVector();
 
-  // TODO T1.4: gabungkan joystick
-  // const js = getJoystickVector();
-  // return { x: kb.x || js.x, y: kb.y || js.y };
+  // Prioritaskan joystick kalau aktif, kalau tidak pakai keyboard
+  const jsLen = Math.sqrt(js.x * js.x + js.y * js.y);
+  if (jsLen > 0) return js;
 
   return kb;
 }

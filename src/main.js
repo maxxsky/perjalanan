@@ -5,10 +5,12 @@ import { loadJourney } from './data/loader.js';
 import { initController, updateController } from './player/controller.js';
 import { initFollowCamera, updateFollowCamera } from './player/camera.js';
 import { initKeyboard } from './input/keyboard.js';
+import { initJoystick } from './input/joystick.js';
 
 document.body.appendChild(renderer.domElement);
 
 initKeyboard();
+initJoystick();
 
 loadJourney()
   .then((data) => {
@@ -33,11 +35,9 @@ loadJourney()
     character.position.set(spawn.x, 0, spawn.z);
     scene.add(character);
 
-    // Init controller + camera
     initController(character, camera);
     initFollowCamera(character, camera);
 
-    // Game loop
     startLoop((delta) => {
       updateController(delta);
       updateFollowCamera(delta);
