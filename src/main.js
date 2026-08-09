@@ -3,11 +3,11 @@ import { scene, renderer, camera } from './core/scene.js';
 import { startLoop } from './core/loop.js';
 import { loadJourney } from './data/loader.js';
 import { initController, updateController } from './player/controller.js';
+import { initFollowCamera, updateFollowCamera } from './player/camera.js';
 import { initKeyboard } from './input/keyboard.js';
 
 document.body.appendChild(renderer.domElement);
 
-// Init keyboard input
 initKeyboard();
 
 loadJourney()
@@ -16,31 +16,31 @@ loadJourney()
 
     const spawn = data.areas[0].spawn;
 
-    // Placeholder karakter: badan (merah)
+    // Placeholder karakter
     const bodyGeo = new THREE.BoxGeometry(0.6, 1.6, 0.4);
     const bodyMat = new THREE.MeshLambertMaterial({ color: 0xe74c3c });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.position.y = 0.8;
 
-    // Penanda arah hadap (kuning)
     const markerGeo = new THREE.BoxGeometry(0.2, 0.3, 0.15);
     const markerMat = new THREE.MeshLambertMaterial({ color: 0xf1c40f });
     const marker = new THREE.Mesh(markerGeo, markerMat);
     marker.position.set(0, 0, 0.28);
     body.add(marker);
 
-    // Group karakter
     const character = new THREE.Group();
     character.add(body);
     character.position.set(spawn.x, 0, spawn.z);
     scene.add(character);
 
-    // Init controller dengan referensi character + camera
+    // Init controller + camera
     initController(character, camera);
+    initFollowCamera(character, camera);
 
-    // Start game loop
+    // Game loop
     startLoop((delta) => {
       updateController(delta);
+      updateFollowCamera(delta);
       renderer.render(scene, camera);
     });
   })
