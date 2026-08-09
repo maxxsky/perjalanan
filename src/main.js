@@ -21,8 +21,9 @@ loadJourney()
     const area = data.areas[0];
     const palette = area.palette;
 
-    // Scene background dari palette
+    // Scene background + fog dari palette
     scene.background = new THREE.Color(palette.sky);
+    scene.fog = new THREE.Fog(palette.fog, CONFIG.world.fogNear, CONFIG.world.fogFar);
 
     // Terrain + air
     const terrain = createTerrain(palette);

@@ -3,6 +3,7 @@ import { CONFIG } from '../config.js';
 import { getInputVector } from '../input/index.js';
 import { getCameraYaw } from './camera.js';
 import { getTerrainHeight } from '../world/terrain.js';
+import { applyBounds } from '../world/bounds.js';
 
 let character = null;
 let camera = null;
@@ -71,6 +72,9 @@ export function updateController(delta) {
   const speed = CONFIG.player.walkSpeed;
   character.position.x += moveX * speed * delta;
   character.position.z += moveZ * speed * delta;
+
+  // Batas dunia — dorongan balik
+  applyBounds(character.position, delta);
 
   // Y mengikuti terrain dengan smoothing
   const targetY = getTerrainHeight(character.position.x, character.position.z);
