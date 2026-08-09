@@ -15,7 +15,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000,
 );
-camera.position.set(0, CONFIG.camera.height, CONFIG.camera.distance);
+camera.position.set(0, CONFIG.camera.height, -CONFIG.camera.distance);
 camera.lookAt(0, CONFIG.camera.lookAtHeight, 0);
 
 // Lighting
