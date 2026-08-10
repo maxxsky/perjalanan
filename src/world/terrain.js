@@ -9,10 +9,6 @@ import { mulberry32, hashString } from '../util/rng.js';
 
 const perlin = new ImprovedNoise();
 
-/**
- * Fractal Brownian Motion — tiga oktaf.
- * Amplitudo per oktaf adalah satuan DUNIA, tidak dinormalisasi.
- */
 function fbm(x, z) {
   return (
     perlin.noise(x * 0.008, 0, z * 0.008) * 6 +
@@ -22,8 +18,10 @@ function fbm(x, z) {
 }
 
 // ============================================================
-//  Profil melintang (cross-section)
+//  Profil melintang — Sekongkang
 // ============================================================
+// Data: pantai sempit, pesisir landai 0-80m dalam ~5km,
+// bukit mulai naik setelah 2-3km dari pantai, max ~400m di viewpoint.
 
 function smoothstep(edge0, edge1, x) {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
@@ -31,17 +29,17 @@ function smoothstep(edge0, edge1, x) {
 }
 
 const PROFILE = [
-  { x: -100, y: -12 },   // laut dalam
-  { x: -50,  y: -8 },    // shelf samudra
-  { x: -30,  y: -2 },    // mendekati pantai
-  { x: -22,  y: -0.2 },  // bawah permukaan
-  { x: -16,  y: 0.6 },   // PANTAI — sempit, cuma 6 unit
-  { x: -8,   y: 1.5 },   // dataran pesisir (jalan, desa)
-  { x: 2,    y: 4 },     // mulai tanjakan
-  { x: 12,   y: 22 },    // bukit pertama — curam!
-  { x: 30,   y: 48 },    // perbukitan
-  { x: 55,   y: 70 },    // bukit tinggi
-  { x: 100,  y: 95 },    // puncak
+  { x: -100, y: -10 },   // laut dalam
+  { x: -55,  y: -6 },    // shelf
+  { x: -35,  y: -1.5 },  // mendekati pantai
+  { x: -22,  y: -0.1 },  // pinggir air
+  { x: -14,  y: 0.4 },   // PANTAI PASIR — sempit, ~8 unit
+  { x: -5,   y: 1.0 },   // dataran pesisir (jalan, desa)
+  { x: 8,    y: 2.5 },   // mulai tanjakan landai
+  { x: 20,   y: 10 },    // kaki bukit
+  { x: 40,   y: 22 },    // perbukitan
+  { x: 65,   y: 35 },    // bukit tinggi
+  { x: 100,  y: 48 },    // puncak (viewpoint ~400m, diskalakan)
 ];
 
 function getBaseHeight(x) {
@@ -60,12 +58,12 @@ function getBaseHeight(x) {
 }
 
 function getNoiseDamping(x) {
-  if (x < -30) return 0.0;
-  if (x < -22) return smoothstep(-30, -22, x) * 0.03;
-  if (x < -8)  return 0.03 + smoothstep(-22, -8, x) * 0.05;
-  if (x < 2)   return 0.08;  // dataran pesisir: hampir datar
-  if (x < 20)  return 0.08 + smoothstep(2, 20, x) * 0.92;
-  return 1.0;  // bukit: noise penuh
+  if (x < -22) return 0.0;
+  if (x < -14) return smoothstep(-22, -14, x) * 0.03;
+  if (x < -5)  return 0.03 + smoothstep(-14, -5, x) * 0.05;
+  if (x < 8)   return 0.08;
+  if (x < 25)  return 0.08 + smoothstep(8, 25, x) * 0.92;
+  return 1.0;
 }
 
 // ============================================================
@@ -95,9 +93,9 @@ function getVertexColor(y, palette, variation) {
 
   if (y < -1) {
     hex = parseInt(palette.water.slice(1), 16);
-  } else if (y < 1.5) {
+  } else if (y < 1.2) {
     hex = parseInt(palette.sand.slice(1), 16);
-  } else if (y < 30) {
+  } else if (y < 15) {
     hex = parseInt(palette.terrain.slice(1), 16);
   } else {
     hex = darkenHex(parseInt(palette.terrain.slice(1), 16), 0.75);
@@ -115,12 +113,6 @@ function getVertexColor(y, palette, variation) {
 //  Mesh terrain
 // ============================================================
 
-/**
- * Layout array setelah PlaneGeometry + rotateX(-PI/2):
- *   array[ix+0] = world X  (rentang -sizeX/2 .. sizeX/2)
- *   array[ix+1] = world Y  (tinggi, awal 0)
- *   array[ix+2] = world Z  (rentang -sizeZ/2 .. sizeZ/2)
- */
 export function createTerrain(palette) {
   const { segmentsX, segmentsZ, sizeX, sizeZ } = CONFIG.terrain;
 
@@ -129,7 +121,6 @@ export function createTerrain(palette) {
 
   const positions = geo.attributes.position;
 
-  // Displace vertex Y ke terrain height
   for (let i = 0; i < positions.count; i++) {
     const ix = i * 3;
     const worldX = positions.array[ix];
@@ -139,21 +130,18 @@ export function createTerrain(palette) {
 
   positions.needsUpdate = true;
 
-  // Non-indexed → flat shading per segitiga
   const nonIndexed = geo.toNonIndexed();
   nonIndexed.computeVertexNormals();
 
-  // Vertex colors
   const colors = new Float32Array(nonIndexed.attributes.position.count * 3);
   const nPositions = nonIndexed.attributes.position;
 
-  // PRNG untuk variasi warna — seed dari area biar deterministik
   const colorRng = mulberry32(hashString(palette.terrain));
 
   for (let i = 0; i < nPositions.count; i++) {
     const ix = i * 3;
     const worldY = nPositions.array[ix + 1];
-    const variation = colorRng() - 0.5; // -0.5 .. 0.5
+    const variation = colorRng() - 0.5;
     const color = getVertexColor(worldY, palette, variation);
     colors[ix] = color.r;
     colors[ix + 1] = color.g;
@@ -174,9 +162,6 @@ export function createTerrain(palette) {
 //  Air
 // ============================================================
 
-/**
- * Plane air hanya di sisi barat (laut), tidak muncul di timur (bukit).
- */
 export function createWater(palette) {
   const geo = new THREE.PlaneGeometry(260, 400);
   const mat = new THREE.MeshLambertMaterial({
