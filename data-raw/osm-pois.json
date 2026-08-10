@@ -1,0 +1,171 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-08-10T13:47:35Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 1271861519,
+  "lat": -8.9340891,
+  "lon": 116.7689722,
+  "tags": {
+    "admin_level": "7",
+    "name": "Goa",
+    "place": "village",
+    "ref": "52.07.01.2001",
+    "wikidata": "Q19725987"
+  }
+},
+{
+  "type": "node",
+  "id": 3537633477,
+  "lat": -8.9778345,
+  "lon": 116.7370123,
+  "tags": {
+    "name": "Rantung",
+    "natural": "beach"
+  }
+},
+{
+  "type": "node",
+  "id": 6135581387,
+  "lat": -8.9749038,
+  "lon": 116.7359887,
+  "tags": {
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 7157497371,
+  "lat": -8.9787699,
+  "lon": 116.7373481,
+  "tags": {
+    "name": "Castaway Surf Retreat",
+    "phone": "+62-819-16728222",
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 7157517449,
+  "lat": -8.9664269,
+  "lon": 116.7461919,
+  "tags": {
+    "name": "Sekongkang",
+    "place": "village"
+  }
+},
+{
+  "type": "node",
+  "id": 7157533577,
+  "lat": -8.9709791,
+  "lon": 116.7457339,
+  "tags": {
+    "name": "Aloha Homestay",
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 7157538990,
+  "lat": -8.9742175,
+  "lon": 116.7370431,
+  "tags": {
+    "name": "Yo Yo's Beach Homestay",
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 7157553280,
+  "lat": -8.9800611,
+  "lon": 116.7373024,
+  "tags": {
+    "name": "Kacchapa Beach Resort",
+    "phone": "+62-821-47192203",
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 7157555580,
+  "lat": -8.9804041,
+  "lon": 116.7374108,
+  "tags": {
+    "name": "New Rantung",
+    "phone": "+62-853-38844301",
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 7157558261,
+  "lat": -8.9794075,
+  "lon": 116.7372912,
+  "tags": {
+    "name": "Rantung Beach",
+    "phone": "+62-878-39054999",
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 7157558791,
+  "lat": -8.9752695,
+  "lon": 116.7369795,
+  "tags": {
+    "name": "Lisa's Homestay",
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 7157559943,
+  "lat": -8.9743162,
+  "lon": 116.7377377,
+  "tags": {
+    "name": "Baha Baha Villas",
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 7157562015,
+  "lat": -8.9813280,
+  "lon": 116.7380100,
+  "tags": {
+    "name": "D'Epic Homestay",
+    "phone": "+62-812-38278666",
+    "tourism": "guest_house"
+  }
+},
+{
+  "type": "node",
+  "id": 7157564297,
+  "lat": -8.9827923,
+  "lon": 116.7390874,
+  "tags": {
+    "name": "Yo Yo's",
+    "phone": "+62-878-66950576",
+    "tourism": "hotel"
+  }
+},
+{
+  "type": "node",
+  "id": 7157564559,
+  "lat": -8.9781011,
+  "lon": 116.7375452,
+  "tags": {
+    "name": "Sing Ken Ken's Bungalows",
+    "phone": "+62-812-36000462",
+    "tourism": "guest_house"
+  }
+}
+
+  ]
+}
