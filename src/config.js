@@ -19,7 +19,8 @@ export const CONFIG = {
     deadzone: 0.15,
   },
   world: {
-    pathWidth: 3.5,
+    pathWidth: 1.5,       // 15 m — sengaja dilebihkan dari asli (6-7 m) agar terbaca dari kamera
+    pathYOffset: 0.25,    // 2.6 m — offset vertikal supaya jalur selalu di atas terrain
     bounds: { minX: -95, maxX: 95, minZ: -145, maxZ: 145 },
     boundsPushback: 6.0,
     fogNear: 60,

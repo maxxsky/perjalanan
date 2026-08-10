@@ -204,7 +204,7 @@ const heightM = (bbox.maxLat - bbox.minLat) * 110574;
 // ---------------- Tulis journey.json ----------------
 const existing = JSON.parse(fs.readFileSync('public/data/journey.json', 'utf8'));
 const palette = existing.areas?.find((a) => a.id === 'sekongkang')?.palette ?? {
-  sky: '#8FBCD4', fog: '#A8C5D6', terrain: '#4A7C3F', sand: '#E8DCC0', water: '#1E4D6B',
+  sky: '#8FBCD4', fog: '#A8C5D6', terrain: '#4A7C3F', sand: '#E8DCC0', water: '#1E4D6B', path: '#4A443C',
 };
 
 const journey = {

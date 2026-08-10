@@ -15,7 +15,8 @@
         "fog": "#A8C5D6",
         "terrain": "#4A7C3F",
         "sand": "#E8DCC0",
-        "water": "#1E4D6B"
+        "water": "#1E4D6B",
+        "path": "#4A443C"
       },
       "geo": {
         "bbox": {
