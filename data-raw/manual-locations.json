@@ -1,0 +1,16 @@
+{
+  "_catatan": "Lokasi kenangan yang koordinatnya diambil manual dari Google Maps (klik kanan di titiknya). Sumber ini terpisah dari OSM karena banyak tempat kecil tidak terpetakan di OSM. Tambahkan entri baru di sini, lalu jalankan ulang tools/build-journey.mjs.",
+  "_format": "lat/lon dalam derajat desimal. date boleh null kalau belum diisi. photo diisi nama file di public/photos/ setelah foto dipilih dan di-resize.",
+  "sekongkang": [
+    {
+      "id": "villa-surga",
+      "name": "Villa Surga",
+      "lat": -8.9745016,
+      "lon": 116.7363476,
+      "date": null,
+      "note": "",
+      "photo": null,
+      "source": "Google Maps, koordinat dari Brahma"
+    }
+  ]
+}

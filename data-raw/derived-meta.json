@@ -1,0 +1,41 @@
+{
+  "builtAt": "2026-08-10T14:21:41.844Z",
+  "sources": [
+    "data-raw/osm-roads.json",
+    "data-raw/osm-pois.json",
+    "data-raw/manual-locations.json"
+  ],
+  "bbox": {
+    "minLat": -8.988520190000001,
+    "maxLat": -8.96069901,
+    "minLon": 116.7317016331117,
+    "maxLon": 116.75047896688827
+  },
+  "zoom": 13,
+  "tiles": [
+    {
+      "z": 13,
+      "x": 6752,
+      "y": 4300,
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/13/6752/4300.png"
+    },
+    {
+      "z": 13,
+      "x": 6752,
+      "y": 4301,
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/13/6752/4301.png"
+    }
+  ],
+  "worldSize": {
+    "sizeX": 200,
+    "sizeZ": 300
+  },
+  "realExtentMeters": {
+    "width": 2065,
+    "height": 3076
+  },
+  "metersPerUnit": {
+    "x": 10.32,
+    "z": 10.25
+  }
+}
