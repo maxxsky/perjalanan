@@ -31,16 +31,17 @@ function smoothstep(edge0, edge1, x) {
 }
 
 const PROFILE = [
-  { x: -100, y: -8 },    // laut dalam
-  { x: -65,  y: -8 },    // mulai landai
-  { x: -30,  y: -0.8 },  // akhir lereng bawah laut
-  { x: -18,  y: -0.3 },  // awal pantai
-  { x: -5,   y: 0.5 },   // pantai atas
-  { x: 12,   y: 1.0 },   // jalur datar
-  { x: 25,   y: 1.5 },   // awal kaki bukit
-  { x: 50,   y: 14 },    // bukit
-  { x: 80,   y: 28 },    // bukit tinggi
-  { x: 100,  y: 35 },    // puncak
+  { x: -100, y: -12 },   // laut dalam
+  { x: -50,  y: -8 },    // shelf samudra
+  { x: -30,  y: -2 },    // mendekati pantai
+  { x: -22,  y: -0.2 },  // bawah permukaan
+  { x: -16,  y: 0.6 },   // PANTAI — sempit, cuma 6 unit
+  { x: -8,   y: 1.5 },   // dataran pesisir (jalan, desa)
+  { x: 2,    y: 4 },     // mulai tanjakan
+  { x: 12,   y: 22 },    // bukit pertama — curam!
+  { x: 30,   y: 48 },    // perbukitan
+  { x: 55,   y: 70 },    // bukit tinggi
+  { x: 100,  y: 95 },    // puncak
 ];
 
 function getBaseHeight(x) {
@@ -59,12 +60,12 @@ function getBaseHeight(x) {
 }
 
 function getNoiseDamping(x) {
-  if (x < -40) return 0.0;
-  if (x < -25) return smoothstep(-40, -25, x) * 0.05;
-  if (x < -10) return 0.05 + smoothstep(-25, -10, x) * 0.1;
-  if (x < 15)  return 0.08;
-  if (x < 30)  return 0.08 + smoothstep(15, 30, x) * 0.92;
-  return 1.0;
+  if (x < -30) return 0.0;
+  if (x < -22) return smoothstep(-30, -22, x) * 0.03;
+  if (x < -8)  return 0.03 + smoothstep(-22, -8, x) * 0.05;
+  if (x < 2)   return 0.08;  // dataran pesisir: hampir datar
+  if (x < 20)  return 0.08 + smoothstep(2, 20, x) * 0.92;
+  return 1.0;  // bukit: noise penuh
 }
 
 // ============================================================
@@ -94,9 +95,9 @@ function getVertexColor(y, palette, variation) {
 
   if (y < -1) {
     hex = parseInt(palette.water.slice(1), 16);
-  } else if (y < 1.2) {
+  } else if (y < 1.5) {
     hex = parseInt(palette.sand.slice(1), 16);
-  } else if (y < 10) {
+  } else if (y < 30) {
     hex = parseInt(palette.terrain.slice(1), 16);
   } else {
     hex = darkenHex(parseInt(palette.terrain.slice(1), 16), 0.75);
