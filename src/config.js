@@ -20,7 +20,7 @@ export const CONFIG = {
   },
   world: {
     pathWidth: 3.5,
-    bounds: { minX: -30, maxX: 60, minZ: -140, maxZ: 140 },
+    bounds: { minX: -95, maxX: 95, minZ: -145, maxZ: 145 },
     boundsPushback: 6.0,
     fogNear: 60,
     fogFar: 220,
@@ -31,5 +31,10 @@ export const CONFIG = {
     segmentsZ: 150,
     sizeX: 200,
     sizeZ: 300,
+    // 1 unit dunia = 10.25 m secara horizontal (dari data-raw/derived-meta.json).
+    // heightScale BUKAN 1/10.25. Nilai di bawah setara pelebaran vertikal sekitar 3x.
+    // Ini konvensi visual, bukan representasi metrik.
+    // Titik awal untuk disetel Brahma sambil melihat hasilnya.
+    heightScale: 0.3,
   },
 };

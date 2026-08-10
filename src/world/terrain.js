@@ -1,88 +1,71 @@
 import * as THREE from 'three';
-import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
 import { CONFIG } from '../config.js';
 import { mulberry32, hashString } from '../util/rng.js';
 
 // ============================================================
-//  Noise
+//  Heightmap state
 // ============================================================
 
-const perlin = new ImprovedNoise();
+let _grid = null;        // Float32Array, width × height
+let _width = 0;
+let _height = 0;
+let _elevMin = 0;
+let _elevMax = 0;
 
-function fbm(x, z) {
-  return (
-    perlin.noise(x * 0.008, 0, z * 0.008) * 6 +
-    perlin.noise(x * 0.03, 0, z * 0.03) * 1.5 +
-    perlin.noise(x * 0.1, 0, z * 0.1) * 0.3
-  );
+/**
+ * Panggil sekali sebelum createTerrain.
+ * @param {object} json — isi public/data/sekongkang-heightmap.json
+ */
+export function initTerrain(json) {
+  _width = json.width;
+  _height = json.height;
+  _elevMin = json.elevationRange.min;
+  _elevMax = json.elevationRange.max;
+  _grid = new Float32Array(json.data);
 }
 
 // ============================================================
-//  Profil melintang — Sekongkang
-// ============================================================
-// Data: pantai sempit, pesisir landai 0-80m dalam ~5km,
-// bukit mulai naik setelah 2-3km dari pantai, max ~400m di viewpoint.
-
-function smoothstep(edge0, edge1, x) {
-  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
-  return t * t * (3 - 2 * t);
-}
-
-// Profil Sekongkang — berdasarkan SRTM 30m
-// Skala game: 1 unit ≈ 50m, terrain 100 unit = 5km
-// Data: pantai 5m, 400m datar, bukit 150m @1.5km, puncak 279m @3km
-
-const PROFILE = [
-  { x: -100, y: -8 },    // laut dalam
-  { x: -40,  y: -4 },    // shelf
-  { x: -22,  y: -1 },    // dekat pantai
-  { x: -16,  y: 0.1 },   // PANTAI — garis air
-  { x: -10,  y: 0.3 },   // dataran pesisir (~400m)
-  { x: 0,    y: 1.5 },   // mulai tanjakan
-  { x: 12,   y: 3.5 },   // bukit pertama (~150m)
-  { x: 28,   y: 6.0 },   // puncak (~280m @3km)
-  { x: 45,   y: 3.0 },   // turun ke lembah
-  { x: 60,   y: 8.0 },   // bukit berikutnya
-  { x: 100,  y: 12.0 },  // pedalaman
-];
-
-function getBaseHeight(x) {
-  if (x <= PROFILE[0].x) return PROFILE[0].y;
-  if (x >= PROFILE[PROFILE.length - 1].x) return PROFILE[PROFILE.length - 1].y;
-
-  for (let i = 0; i < PROFILE.length - 1; i++) {
-    const a = PROFILE[i];
-    const b = PROFILE[i + 1];
-    if (x >= a.x && x <= b.x) {
-      const t = smoothstep(a.x, b.x, x);
-      return a.y + (b.y - a.y) * t;
-    }
-  }
-  return 0;
-}
-
-function getNoiseDamping(x) {
-  if (x < -22) return 0.0;
-  if (x < -16) return smoothstep(-22, -16, x) * 0.03;
-  if (x < -10) return 0.03 + smoothstep(-16, -10, x) * 0.05;
-  if (x < 5)   return 0.08;
-  if (x < 20)  return 0.08 + smoothstep(5, 20, x) * 0.92;
-  return 1.0;
-}
-
-// ============================================================
-//  Height function
+//  Height function — bilinear sampling
 // ============================================================
 
+/**
+ * @param {number} x — koordinat dunia X
+ * @param {number} z — koordinat dunia Z
+ * @returns {number} tinggi dalam unit dunia (sudah dikali heightScale)
+ */
 export function getTerrainHeight(x, z) {
-  const base = getBaseHeight(x);
-  const noise = fbm(x, z);
-  const damp = getNoiseDamping(x);
-  return base + noise * damp;
+  if (!_grid) return 0;
+
+  const { sizeX, sizeZ, heightScale } = CONFIG.terrain;
+
+  // Koordinat dunia → indeks grid pecahan
+  // u: 0 di barat (x = -sizeX/2), width-1 di timur (x = +sizeX/2)
+  // v: 0 di utara (z = +sizeZ/2, baris 0), height-1 di selatan (z = -sizeZ/2)
+  const u = (x / sizeX + 0.5) * (_width - 1);
+  const v = (0.5 - z / sizeZ) * (_height - 1);
+
+  // Jepit
+  const iu = Math.max(0, Math.min(_width - 2, Math.floor(u)));
+  const iv = Math.max(0, Math.min(_height - 2, Math.floor(v)));
+
+  const fu = u - iu;
+  const fv = v - iv;
+
+  // Bilinear
+  const v00 = _grid[iv * _width + iu];
+  const v10 = _grid[iv * _width + iu + 1];
+  const v01 = _grid[(iv + 1) * _width + iu];
+  const v11 = _grid[(iv + 1) * _width + iu + 1];
+
+  const top = v00 + (v10 - v00) * fu;
+  const bot = v01 + (v11 - v01) * fu;
+  const meters = top + (bot - top) * fv;
+
+  return meters * heightScale;
 }
 
 // ============================================================
-//  Warna vertex dari tinggi
+//  Warna vertex — dari persentil elevasi aktual
 // ============================================================
 
 function darkenHex(hex, factor) {
@@ -92,14 +75,20 @@ function darkenHex(hex, factor) {
   return (r << 16) | (g << 8) | b;
 }
 
-function getVertexColor(y, palette, variation) {
+/**
+ * Ambang warna dihitung dari elevationRange di heightmap.
+ * Persentil: pasir ~15, hijau ~tengah, gelap ~75.
+ */
+function getVertexColor(meters, palette, variation) {
   let hex;
+  const sandMax = _elevMin + (_elevMax - _elevMin) * 0.15;
+  const terrainMax = _elevMin + (_elevMax - _elevMin) * 0.75;
 
-  if (y < -1) {
+  if (meters < 0) {
     hex = parseInt(palette.water.slice(1), 16);
-  } else if (y < 1.0) {
+  } else if (meters < sandMax) {
     hex = parseInt(palette.sand.slice(1), 16);
-  } else if (y < 6) {
+  } else if (meters < terrainMax) {
     hex = parseInt(palette.terrain.slice(1), 16);
   } else {
     hex = darkenHex(parseInt(palette.terrain.slice(1), 16), 0.75);
@@ -118,6 +107,11 @@ function getVertexColor(y, palette, variation) {
 // ============================================================
 
 export function createTerrain(palette) {
+  if (!_grid) {
+    console.error('createTerrain: panggil initTerrain() dulu.');
+    return new THREE.Mesh();
+  }
+
   const { segmentsX, segmentsZ, sizeX, sizeZ } = CONFIG.terrain;
 
   const geo = new THREE.PlaneGeometry(sizeX, sizeZ, segmentsX, segmentsZ);
@@ -137,16 +131,19 @@ export function createTerrain(palette) {
   const nonIndexed = geo.toNonIndexed();
   nonIndexed.computeVertexNormals();
 
+  // Vertex colors — pakai elevasi meter (sebelum heightScale)
   const colors = new Float32Array(nonIndexed.attributes.position.count * 3);
   const nPositions = nonIndexed.attributes.position;
+  const { heightScale } = CONFIG.terrain;
 
   const colorRng = mulberry32(hashString(palette.terrain));
 
   for (let i = 0; i < nPositions.count; i++) {
     const ix = i * 3;
-    const worldY = nPositions.array[ix + 1];
+    const worldY = nPositions.array[ix + 1]; // tinggi dalam unit dunia
+    const meters = worldY / heightScale;     // konversi balik ke meter
     const variation = colorRng() - 0.5;
-    const color = getVertexColor(worldY, palette, variation);
+    const color = getVertexColor(meters, palette, variation);
     colors[ix] = color.r;
     colors[ix + 1] = color.g;
     colors[ix + 2] = color.b;
@@ -167,7 +164,9 @@ export function createTerrain(palette) {
 // ============================================================
 
 export function createWater(palette) {
-  const geo = new THREE.PlaneGeometry(260, 400);
+  const { sizeX, sizeZ } = CONFIG.terrain;
+  // Cukup menutupi seluruh dunia + margin
+  const geo = new THREE.PlaneGeometry(sizeX + 20, sizeZ + 20);
   const mat = new THREE.MeshLambertMaterial({
     color: palette.water,
     transparent: true,
@@ -175,6 +174,6 @@ export function createWater(palette) {
   });
   const water = new THREE.Mesh(geo, mat);
   water.rotation.x = -Math.PI / 2;
-  water.position.set(-80, 0, 0);
+  water.position.y = 0; // permukaan laut = 0
   return water;
 }

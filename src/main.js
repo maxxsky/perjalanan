@@ -7,7 +7,7 @@ import { initController, updateController } from './player/controller.js';
 import { initFollowCamera, updateFollowCamera } from './player/camera.js';
 import { initKeyboard } from './input/keyboard.js';
 import { initJoystick } from './input/joystick.js';
-import { createTerrain, createWater, getTerrainHeight } from './world/terrain.js';
+import { createTerrain, createWater, getTerrainHeight, initTerrain } from './world/terrain.js';
 import { createPath } from './world/path.js';
 import { createVegetation } from './world/vegetation.js';
 
@@ -17,11 +17,19 @@ initKeyboard();
 initJoystick();
 
 loadJourney()
-  .then((data) => {
+  .then(async (data) => {
     console.log('Journey data loaded:', data);
 
     const area = data.areas[0];
     const palette = area.palette;
+
+    // Load heightmap dari geo.heightmap
+    const hmPath = area.geo?.heightmap || 'data/sekongkang-heightmap.json';
+    const hmRes = await fetch(`/${hmPath}`);
+    if (!hmRes.ok) throw new Error(`Gagal load heightmap: ${hmPath} (HTTP ${hmRes.status})`);
+    const heightmap = await hmRes.json();
+    initTerrain(heightmap);
+    console.log(`Heightmap loaded: ${heightmap.width}×${heightmap.height}, elevasi ${heightmap.elevationRange.min}..${heightmap.elevationRange.max}m`);
 
     // Scene background + fog
     scene.background = new THREE.Color(palette.sky);
@@ -65,6 +73,6 @@ loadJourney()
     });
   })
   .catch((err) => {
-    console.error('Failed to load journey data:', err.message);
+    console.error('Failed to load:', err.message);
     document.body.innerHTML = `<p style="color:red;padding:2rem;">Error: ${err.message}</p>`;
   });
