@@ -28,18 +28,22 @@ function smoothstep(edge0, edge1, x) {
   return t * t * (3 - 2 * t);
 }
 
+// Profil Sekongkang — berdasarkan SRTM 30m
+// Skala game: 1 unit ≈ 50m, terrain 100 unit = 5km
+// Data: pantai 5m, 400m datar, bukit 150m @1.5km, puncak 279m @3km
+
 const PROFILE = [
-  { x: -100, y: -10 },   // laut dalam
-  { x: -55,  y: -6 },    // shelf
-  { x: -35,  y: -1.5 },  // mendekati pantai
-  { x: -22,  y: -0.1 },  // pinggir air
-  { x: -14,  y: 0.4 },   // PANTAI PASIR — sempit, ~8 unit
-  { x: -5,   y: 1.0 },   // dataran pesisir (jalan, desa)
-  { x: 8,    y: 2.5 },   // mulai tanjakan landai
-  { x: 20,   y: 10 },    // kaki bukit
-  { x: 40,   y: 22 },    // perbukitan
-  { x: 65,   y: 35 },    // bukit tinggi
-  { x: 100,  y: 48 },    // puncak (viewpoint ~400m, diskalakan)
+  { x: -100, y: -8 },    // laut dalam
+  { x: -40,  y: -4 },    // shelf
+  { x: -22,  y: -1 },    // dekat pantai
+  { x: -16,  y: 0.1 },   // PANTAI — garis air
+  { x: -10,  y: 0.3 },   // dataran pesisir (~400m)
+  { x: 0,    y: 1.5 },   // mulai tanjakan
+  { x: 12,   y: 3.5 },   // bukit pertama (~150m)
+  { x: 28,   y: 6.0 },   // puncak (~280m @3km)
+  { x: 45,   y: 3.0 },   // turun ke lembah
+  { x: 60,   y: 8.0 },   // bukit berikutnya
+  { x: 100,  y: 12.0 },  // pedalaman
 ];
 
 function getBaseHeight(x) {
@@ -59,10 +63,10 @@ function getBaseHeight(x) {
 
 function getNoiseDamping(x) {
   if (x < -22) return 0.0;
-  if (x < -14) return smoothstep(-22, -14, x) * 0.03;
-  if (x < -5)  return 0.03 + smoothstep(-14, -5, x) * 0.05;
-  if (x < 8)   return 0.08;
-  if (x < 25)  return 0.08 + smoothstep(8, 25, x) * 0.92;
+  if (x < -16) return smoothstep(-22, -16, x) * 0.03;
+  if (x < -10) return 0.03 + smoothstep(-16, -10, x) * 0.05;
+  if (x < 5)   return 0.08;
+  if (x < 20)  return 0.08 + smoothstep(5, 20, x) * 0.92;
   return 1.0;
 }
 
@@ -93,9 +97,9 @@ function getVertexColor(y, palette, variation) {
 
   if (y < -1) {
     hex = parseInt(palette.water.slice(1), 16);
-  } else if (y < 1.2) {
+  } else if (y < 1.0) {
     hex = parseInt(palette.sand.slice(1), 16);
-  } else if (y < 15) {
+  } else if (y < 6) {
     hex = parseInt(palette.terrain.slice(1), 16);
   } else {
     hex = darkenHex(parseInt(palette.terrain.slice(1), 16), 0.75);
