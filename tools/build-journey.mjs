@@ -240,6 +240,19 @@ fs.writeFileSync('data-raw/derived-meta.json', JSON.stringify({
   metersPerUnit: { x: +(widthM / SIZE_X).toFixed(2), z: +(heightM / SIZE_Z).toFixed(2) },
 }, null, 2));
 
+// ---------------- Validasi foto moment ----------------
+let photoManifest = { photos: [] };
+try {
+  photoManifest = JSON.parse(fs.readFileSync('data/photo-manifest.json', 'utf8'));
+} catch {}
+const photoFiles = new Set(photoManifest.photos.map(p => p.file));
+
+for (const m of moments) {
+  if (m.photo && !photoFiles.has(m.photo)) {
+    console.warn(`PERINGATAN: foto "${m.photo}" untuk moment "${m.id}" tidak ada di data/photo-manifest.json`);
+  }
+}
+
 // ---------------- Laporan & verifikasi ----------------
 const outRoute = route.filter((p) => !inBounds(p));
 const outMoments = moments.filter((m) => !inBounds(m.position));

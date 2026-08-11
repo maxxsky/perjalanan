@@ -38,4 +38,11 @@ export const CONFIG = {
     // Titik awal untuk disetel Brahma sambil melihat hasilnya.
     heightScale: 0.3,
   },
+  moments: {
+    showDistance: 8,
+    frameWidth: 2.2,
+    frameHeight: 2.6,
+    photoSize: 1.9,
+    standHeight: 1.4,
+  },
 };

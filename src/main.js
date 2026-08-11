@@ -10,6 +10,8 @@ import { initJoystick } from './input/joystick.js';
 import { createTerrain, createWater, getTerrainHeight, initTerrain } from './world/terrain.js';
 import { createPath } from './world/path.js';
 import { createVegetation } from './world/vegetation.js';
+import { createPolaroids, updatePolaroids } from './world/polaroid.js';
+import { createLandmarks } from './world/landmark.js';
 
 document.body.appendChild(renderer.domElement);
 
@@ -66,9 +68,62 @@ loadJourney()
     initController(character, camera);
     initFollowCamera(character, camera);
 
+    // Polaroid dari moments
+    const polaroids = createPolaroids(area.moments || [], scene);
+    console.log(`Polaroids: ${polaroids.length}`);
+
+    // Landmark dari OSM (penginapan, pantai)
+    createLandmarks(area.landmarks || [], scene);
+    console.log(`Landmarks: ${(area.landmarks || []).length}`);
+
+    // Panel caption HTML
+    const caption = document.createElement('div');
+    caption.style.cssText = `
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.75); color: #eee; padding: 12px 20px;
+      border-radius: 8px; font-family: sans-serif; text-align: center;
+      opacity: 0; transition: opacity 200ms; pointer-events: none; z-index: 200;
+      max-width: 90vw;
+    `;
+    caption.innerHTML = '<div id="cap-title" style="font-weight:bold;font-size:16px"></div><div id="cap-date" style="font-size:12px;opacity:0.7;margin-top:2px"></div><div id="cap-note" style="font-size:13px;margin-top:4px"></div>';
+    document.body.appendChild(caption);
+
+    const capTitle = caption.querySelector('#cap-title');
+    const capDate = caption.querySelector('#cap-date');
+    const capNote = caption.querySelector('#cap-note');
+    let activeMoment = null;
+
     startLoop((delta) => {
       updateController(delta);
       updateFollowCamera(delta);
+      updatePolaroids(polaroids, camera);
+
+      // Deteksi kedekatan
+      let closest = null, closestDist = Infinity;
+      const charPos = character.position;
+      for (const { mesh, moment } of polaroids) {
+        const dx = charPos.x - mesh.position.x;
+        const dz = charPos.z - mesh.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < CONFIG.moments.showDistance && dist < closestDist) {
+          closest = moment;
+          closestDist = dist;
+        }
+      }
+
+      if (closest !== activeMoment) {
+        activeMoment = closest;
+        if (closest) {
+          capTitle.textContent = closest.title || '';
+          capDate.textContent = closest.date || '';
+          capDate.style.display = closest.date ? '' : 'none';
+          capNote.textContent = closest.note || '';
+          caption.style.opacity = '1';
+        } else {
+          caption.style.opacity = '0';
+        }
+      }
+
       renderer.render(scene, camera);
     });
   })
