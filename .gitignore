@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Foto pribadi — jangan pernah di-commit (repo ini publik)
+photos-src/
+public/photos/
